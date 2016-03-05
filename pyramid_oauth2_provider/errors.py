@@ -77,3 +77,16 @@ class InvalidToken(BaseOauth2Error):
     http://tools.ietf.org/html/draft-ietf-oauth-v2-bearer-23#section-3.1
     """
     error_name = 'invalid_token'
+
+
+class InvalidGrant(BaseOauth2Error):
+    """
+    The provided authorization grant (e.g., authorization
+    code, resource owner credentials) or refresh token is
+    invalid, expired, revoked, does not match the redirection
+    URI used in the authorization request, or was issued to
+    another client.
+
+    https://tools.ietf.org/html/rfc6749#section-5.2
+    """
+    error_name = 'invalid_grant'
