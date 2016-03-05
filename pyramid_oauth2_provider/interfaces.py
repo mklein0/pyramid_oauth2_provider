@@ -6,11 +6,12 @@
 # is always available at http://www.opensource.org/licenses/mit-license.php.
 #
 # This program is distributed in the hope that it will be useful, but
-# without any warrenty; without even the implied warranty of merchantability
+# without any warranty; without even the implied warranty of merchantability
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
 from zope.interface import Interface
+
 
 class IAuthCheck(Interface):
     """
@@ -25,4 +26,10 @@ class IAuthCheck(Interface):
         Validate a given username and password against some kind of store,
         usually a relational database. Return the users user_id if credentials
         are valid, otherwise False or None.
+
+        :param username:
+        :param password:
+
+        :return: Returns the user's user_id if credentials are valid, otherwise False or None
+        :rtype: str | None
         """

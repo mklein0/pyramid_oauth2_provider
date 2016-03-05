@@ -10,11 +10,12 @@
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
+
 class BaseOauth2Error(dict):
     error_name = None
 
     def __init__(self, **kw):
-        dict.__init__(self)
+        super(BaseOauth2Error, self).__init__()
         if kw:
             self.update(kw)
         self['error'] = self.error_name

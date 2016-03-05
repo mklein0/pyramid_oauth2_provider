@@ -13,13 +13,18 @@
 import logging
 
 from pyramid.view import view_config
-from pyramid.security import NO_PERMISSION_REQUIRED
-from pyramid.security import authenticated_userid
-from pyramid.security import Authenticated
+from pyramid.security import (
+    NO_PERMISSION_REQUIRED,
+    authenticated_userid,
+    Authenticated,
+)
 from pyramid.httpexceptions import HTTPFound
-from urlparse import urlparse
-from urlparse import parse_qsl
-from urlparse import ParseResult
+
+from urlparse import (
+    urlparse,
+    parse_qsl,
+    ParseResult,
+)
 from urllib import urlencode
 
 from .models import DBSession as db
@@ -27,16 +32,22 @@ from .models import Oauth2Token
 from .models import Oauth2Code
 from .models import Oauth2RedirectUri
 from .models import Oauth2Client
-from .errors import InvalidToken
-from .errors import InvalidClient
-from .errors import InvalidRequest
-from .errors import UnsupportedGrantType
-from .util import oauth2_settings
-from .util import getClientCredentials
-from .interfaces import IAuthCheck
-from .jsonerrors import HTTPBadRequest
-from .jsonerrors import HTTPUnauthorized
-from .jsonerrors import HTTPMethodNotAllowed
+from pyramid_oauth2_provider.errors import (
+    InvalidToken,
+    InvalidClient,
+    InvalidRequest,
+    UnsupportedGrantType,
+)
+from pyramid_oauth2_provider.util import (
+    oauth2_settings,
+    get_client_credentials,
+)
+from pyramid_oauth2_provider.interfaces import IAuthCheck
+from pyramid_oauth2_provider.jsonerrors import (
+    HTTPBadRequest,
+    HTTPUnauthorized,
+    HTTPMethodNotAllowed,
+)
 
 
 def require_https(handler):
@@ -59,6 +70,7 @@ def require_https(handler):
 
 
 log = logging.getLogger('pyramid_oauth2_provider.views')
+
 
 @view_config(route_name='oauth2_provider_authorize', renderer='json',
              permission=Authenticated)
@@ -90,6 +102,8 @@ def oauth2_authorize(request):
         HTTP/1.1 302 Found
         Location: https://client.example.com/cb?code=AverTaer&state=efg
 
+
+    :param pyramid.request.Request request: Incoming Web Request
     """
     request.client_id = request.params.get('client_id')
 
@@ -104,7 +118,7 @@ def oauth2_authorize(request):
     redirect_uri = request.params.get('redirect_uri')
     redirection_uri = None
     if len(client.redirect_uris) == 1 and (
-        not redirect_uri or redirect_uri == client.redirect_uris[0]):
+            not redirect_uri or redirect_uri == client.redirect_uris[0]):
         redirection_uri = client.redirect_uris[0]
     elif len(client.redirect_uris) > 0:
         redirection_uri = db.query(Oauth2RedirectUri)\
@@ -114,7 +128,6 @@ def oauth2_authorize(request):
         return HTTPBadRequest(InvalidRequest(
             error_description='Redirection URI validation failed'))
 
-    resp = None
     response_type = request.params.get('response_type')
     state = request.params.get('state')
     if 'code' == response_type:
@@ -123,9 +136,9 @@ def oauth2_authorize(request):
         resp = handle_implicit(request, client, redirection_uri, state)
     else:
         log.info('received invalid response_type %s')
-        resp = HTTPBadRequest(InvalidRequest(error_description='Oauth2 unknown '
-            'response_type not supported'))
+        resp = HTTPBadRequest(InvalidRequest(error_description='Oauth2 unknown response_type not supported'))
     return resp
+
 
 def handle_authcode(request, client, redirection_uri, state=None):
     parts = urlparse(redirection_uri.uri)
@@ -143,6 +156,7 @@ def handle_authcode(request, client, redirection_uri, state=None):
         parts.scheme, parts.netloc, parts.path, parts.params,
         urlencode(qparams), '')
     return HTTPFound(location=parts.geturl())
+
 
 def handle_implicit(request, client, redirection_uri, state=None):
     return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
@@ -196,6 +210,8 @@ def oauth2_token(request):
 
     The response will be the same as above with a new access_token and
     refresh_token.
+
+    :param pyramid.request.Request request: Incoming Web Request
     """
 
     # Make sure this is a POST.
@@ -204,13 +220,13 @@ def oauth2_token(request):
         return HTTPMethodNotAllowed(
             'This endpoint only supports the POST method.')
 
-    getClientCredentials(request)
+    get_client_credentials(request)
 
     # Make sure we got a client_id and secret through the authorization
     # policy. Note that you should only get here if not using the Oauth2
     # authorization policy or access was granted through the AuthTKt policy.
     if (not hasattr(request, 'client_id') or
-        not hasattr(request, 'client_secret')):
+            not hasattr(request, 'client_secret')):
         log.info('did not receive client credentials')
         return HTTPUnauthorized('Invalid client credentials')
 
@@ -225,7 +241,6 @@ def oauth2_token(request):
 
     # Check for supported grant type. This is a required field of the form
     # submission.
-    resp = None
     grant_type = request.POST.get('grant_type')
     if grant_type == 'password':
         resp = handle_password(request, client)
@@ -233,18 +248,19 @@ def oauth2_token(request):
         resp = handle_refresh_token(request, client)
     else:
         log.info('invalid grant type: %s' % grant_type)
-        return HTTPBadRequest(UnsupportedGrantType(error_description='Only '
-            'password and refresh_token grant types are supported by this '
-            'authentication server'))
+        return HTTPBadRequest(UnsupportedGrantType(
+            error_description='Only password and refresh_token grant types are supported by this authentication server'
+        ))
 
     add_cache_headers(request)
     return resp
 
+
 def handle_password(request, client):
     if 'username' not in request.POST or 'password' not in request.POST:
         log.info('missing username or password')
-        return HTTPBadRequest(InvalidRequest(error_description='Both username '
-            'and password are required to obtain a password based grant.'))
+        return HTTPBadRequest(InvalidRequest(
+            error_description='Both username and password are required to obtain a password based grant.'))
 
     auth_check = request.registry.queryUtility(IAuthCheck)
     user_id = auth_check().checkauth(request.POST.get('username'),
@@ -252,52 +268,53 @@ def handle_password(request, client):
 
     if not user_id:
         log.info('could not validate user credentials')
-        return HTTPUnauthorized(InvalidClient(error_description='Username and '
-            'password are invalid.'))
+        return HTTPUnauthorized(InvalidClient(error_description='Username and password are invalid.'))
 
     auth_token = Oauth2Token(client, user_id)
     db.add(auth_token)
     db.flush()
     return auth_token.asJSON(token_type='bearer')
 
+
 def handle_refresh_token(request, client):
     if 'refresh_token' not in request.POST:
         log.info('refresh_token field missing')
-        return HTTPBadRequest(InvalidRequest(error_description='refresh_token '
-            'field required'))
+        return HTTPBadRequest(InvalidRequest(error_description='refresh_token field required'))
 
     if 'user_id' not in request.POST:
         log.info('user_id field missing')
-        return HTTPBadRequest(InvalidRequest(error_description='user_id '
-            'field required'))
+        return HTTPBadRequest(InvalidRequest(error_description='user_id field required'))
 
     auth_token = db.query(Oauth2Token).filter_by(
         refresh_token=request.POST.get('refresh_token')).first()
 
     if not auth_token:
         log.info('invalid refresh_token')
-        return HTTPUnauthorized(InvalidToken(error_description='Provided '
-            'refresh_token is not valid.'))
+        return HTTPUnauthorized(InvalidToken(error_description='Provided refresh_token is not valid.'))
 
     if auth_token.client.client_id != client.client_id:
         log.info('invalid client_id')
-        return HTTPBadRequest(InvalidClient(error_description='Client does '
-            'not own this refresh_token.'))
+        return HTTPBadRequest(InvalidClient(error_description='Client does not own this refresh_token.'))
 
     if str(auth_token.user_id) != request.POST.get('user_id'):
         log.info('invalid user_id')
-        return HTTPBadRequest(InvalidClient(error_description='The given '
-            'user_id does not match the given refresh_token.'))
+        return HTTPBadRequest(InvalidClient(
+            error_description='The given user_id does not match the given refresh_token.'))
 
     new_token = auth_token.refresh()
     db.add(new_token)
     db.flush()
     return new_token.asJSON(token_type='bearer')
 
+
 def add_cache_headers(request):
     """
     The Oauth2 draft spec requires that all token endpoint traffic be marked
     as uncacheable.
+
+    :param pyramid.request.Request request: Incoming Web Request
+
+    :rtype: pyramid.request.Request
     """
 
     resp = request.response

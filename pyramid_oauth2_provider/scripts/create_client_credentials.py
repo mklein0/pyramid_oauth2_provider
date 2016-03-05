@@ -28,16 +28,19 @@ from pyramid_oauth2_provider.models import (
     Oauth2Client,
     )
 
+
 def create_client():
     client = Oauth2Client()
     DBSession.add(client)
     return client.client_id, client.client_secret
+
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
     print('usage: %s <config_uri> <section>\n'
           '(example: "%s development.ini myproject")' % (cmd, cmd)) 
     sys.exit(1)
+
 
 def main(argv=sys.argv):
     if len(argv) != 3:
@@ -50,9 +53,10 @@ def main(argv=sys.argv):
     initialize_sql(engine, settings)
 
     with transaction.manager:
-        id, secret = create_client()
-        print 'client_id:', id
+        id_, secret = create_client()
+        print 'client_id:', id_
         print 'client_secret:', secret
+
 
 if __name__ == '__main__':
     import epdb

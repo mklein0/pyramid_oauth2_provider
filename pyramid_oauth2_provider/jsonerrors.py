@@ -6,7 +6,7 @@
 # is always available at http://www.opensource.org/licenses/mit-license.php.
 #
 # This program is distributed in the hope that it will be useful, but
-# without any warrenty; without even the implied warranty of merchantability
+# without any warranty; without even the implied warranty of merchantability
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
@@ -24,7 +24,13 @@ from pyramid.httpexceptions import text_type
 from pyramid.httpexceptions import _no_escape
 from pyramid.httpexceptions import WSGIHTTPException
 
+
 def _quote_escape(value):
+    """
+    :param unicode | str value: String to URL quote escape
+
+    :rtype: str
+    """
     v = _no_escape(value)
     return v.replace('"', '\\"')
 
@@ -47,6 +53,8 @@ ${html_comment}
     def prepare(self, environ):
         """
         Always return errors in JSON.
+
+        :param dict environ: Dictionary of Environment Variables
         """
 
         if not self.body and not self.empty_body:

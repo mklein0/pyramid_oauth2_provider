@@ -6,7 +6,7 @@
 # is always available at http://www.opensource.org/licenses/mit-license.php.
 #
 # This program is distributed in the hope that it will be useful, but
-# without any warrenty; without even the implied warranty of merchantability
+# without any warranty; without even the implied warranty of merchantability
 # or fitness for a particular purpose. See the MIT License for full details.
 #
 
@@ -32,7 +32,13 @@ def oauth2_settings(key=None, default=None):
         return dict((x.split('.', 1)[1], y) for x, y in settings.iteritems()
             if x.startswith('oauth2_provider.'))
 
-def getClientCredentials(request):
+def get_client_credentials(request):
+    """
+
+    :param pyramid.request.Request request: Incoming Request
+    :return: Authorization type and authorization token base64 decoded
+    :rtype: (str, str) | False
+    """
     if 'Authorization' in request.headers:
         auth = request.headers.get('Authorization')
     elif 'authorization' in request.headers:
