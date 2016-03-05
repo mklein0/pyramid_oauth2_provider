@@ -15,13 +15,26 @@ import logging
 
 from pyramid.threadlocal import get_current_registry
 
+
 log = logging.getLogger('pyramid_oauth2_provider.util')
 
-def oauth2_settings(key=None, default=None):
-    settings = get_current_registry().settings
+
+def oauth2_settings(key=None, default=None, settings=None):
+    """
+    This function returns a single key/value within the current pyramid registries settings. Otherwise
+    returns a dict of only oauth2_provider key/values.
+
+    :param str | None key: key name
+    :param Any default: default value to return
+    :param dict settings: Pyramid Application Settings
+
+    :return:
+    """
+    if settings is None:
+        settings = get_current_registry().settings
 
     if key:
-        value = settings.get('oauth2_provider.%s' % key, default)
+        value = settings.get('oauth2_provider.{0}'.format(key), default)
         if value == 'true':
             return True
         elif value == 'false':
@@ -29,8 +42,12 @@ def oauth2_settings(key=None, default=None):
         else:
             return value
     else:
-        return dict((x.split('.', 1)[1], y) for x, y in settings.iteritems()
-            if x.startswith('oauth2_provider.'))
+        return dict(
+            (x.split('.', 1)[1], y)
+            for x, y in settings.iteritems()
+            if x.startswith('oauth2_provider.')
+        )
+
 
 def get_client_credentials(request):
     """

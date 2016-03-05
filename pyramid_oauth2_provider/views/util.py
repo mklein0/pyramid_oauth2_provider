@@ -35,7 +35,7 @@ def require_https(handler):
         :param pyramid request.Request request: Incoming Web Request
         """
         if (request.scheme != 'https' and
-                oauth2_settings('require_ssl', default=True)):
+                oauth2_settings('require_ssl', default=True, settings=request.registry.settings)):
             log.info('rejected request due to unsupported scheme: %s'
                      % request.scheme)
             return HTTPBadRequest(InvalidRequest(
