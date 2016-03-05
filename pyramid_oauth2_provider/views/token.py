@@ -25,7 +25,7 @@ from pyramid_oauth2_provider.errors import (
     UnsupportedGrantType,
 )
 from pyramid_oauth2_provider.util import get_client_credentials
-from pyramid_oauth2_provider.interfaces import IAuthCheck
+from pyramid_oauth2_provider.interfaces.authentication import IAuthCheck
 from pyramid_oauth2_provider.jsonerrors import (
     HTTPBadRequest,
     HTTPUnauthorized,

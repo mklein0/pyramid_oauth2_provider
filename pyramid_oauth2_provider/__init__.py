@@ -16,12 +16,13 @@ from pyramid.config import Configurator
 from pyramid.exceptions import ConfigurationError
 from pyramid.interfaces import IAuthenticationPolicy
 
-from .models import initialize_sql
-from .interfaces import IAuthCheck
-from .authentication import OauthAuthenticationPolicy
+from pyramid_oauth2_provider.models import initialize_sql
+from pyramid_oauth2_provider.interfaces.authentication import IAuthCheck
+from pyramid_oauth2_provider.authentication import OauthAuthenticationPolicy
 
 # imported to make the test runnner happy
-from . import tests
+from pyramid_oauth2_provider import tests
+
 
 def includeme(config):
     settings = config.registry.settings
@@ -34,9 +35,10 @@ def includeme(config):
 
     auth_check = settings.get('oauth2_provider.auth_checker')
     if not auth_check:
-        raise ConfigurationError('You must provide an implementation of the '
-            'authentication check interface that is included with '
-            'pyramid_oauth2_provider for verifying usernames and passwords')
+        raise ConfigurationError(
+            'You must provide an implementation of the authentication check interface that is included with '
+            'pyramid_oauth2_provider for verifying usernames and passwords'
+        )
 
     policy = config.maybe_dotted(auth_check)
     config.registry.registerUtility(policy, IAuthCheck)
@@ -44,6 +46,7 @@ def includeme(config):
     config.add_route('oauth2_provider.authorize', '/oauth2/authorize')
     config.add_route('oauth2_provider.token', '/oauth2/token')
     config.scan()
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
