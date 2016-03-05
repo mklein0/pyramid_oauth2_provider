@@ -48,9 +48,8 @@ def get_client_credentials(request):
         return False
 
     if (not auth.lower().startswith('bearer') and
-        not auth.lower().startswith('basic')):
-        log.debug('authorization header not of type bearer or basic: %s'
-            % auth.lower())
+            not auth.lower().startswith('basic')):
+        log.debug('authorization header not of type bearer or basic: {0}'.format(auth.lower()))
         return False
 
     parts = auth.split()

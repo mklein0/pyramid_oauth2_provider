@@ -80,8 +80,10 @@ class TestCase(unittest.TestCase):
         testing.tearDown()
 
     def getAuthHeader(self, username, password, scheme='Basic'):
-        return {'Authorization': '%s %s'
-            % (scheme, base64.b64encode('%s:%s' % (username, password)))}
+        return dict(
+            Authorization='{0} {1}'.format(scheme, base64.b64encode('{0}:{1}'.format(username, password)))
+        )
+
 
 class TestAuthorizeEndpoint(TestCase):
     def setUp(self):
