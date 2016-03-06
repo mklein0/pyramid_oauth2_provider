@@ -22,7 +22,7 @@ from pyramid.paster import (
     setup_logging,
     )
 
-from pyramid_oauth2_provider.models import (
+from pyramid_oauth2_provider_sqlalchemy.models import (
     DBSession,
     initialize_sql,
     Oauth2Client,

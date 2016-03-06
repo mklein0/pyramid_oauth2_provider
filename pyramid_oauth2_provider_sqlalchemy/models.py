@@ -30,9 +30,12 @@ from sqlalchemy.orm import scoped_session
 
 from zope.sqlalchemy import ZopeTransactionExtension
 
-from .generators import gen_token
-from .generators import gen_client_id
-from .generators import gen_client_secret
+from pyramid_oauth2_provider.generators import (
+    gen_token,
+    gen_client_id,
+    gen_client_secret,
+)
+
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
@@ -57,6 +60,30 @@ class Oauth2Client(Base):
     def isRevoked(self):
         return self.revoked
 
+    def lookup_redirect_uri(self, redirect_uri):
+        """
+
+        :param str redirect_uri: uri to match
+
+        :return: matching redirect uri or None
+        :rtype: str
+        """
+        redirection_uri = None
+        redirect_count = len(self.redirect_uris)
+        if redirect_count == 1 and (
+                not redirect_uri or redirect_uri == self.redirect_uris[0]):
+            redirection_uri = self.redirect_uris[0]
+
+        elif redirect_count > 0:
+            redirection_uri = DBSession.query(Oauth2RedirectUri).filter_by(
+                client_id=self.id, uri=redirect_uri).first()
+
+        if redirection_uri is not None:
+            redirection_uri = redirection_uri.uri
+
+        return redirection_uri
+
+
 
 class Oauth2RedirectUri(Base):
     __tablename__ = 'oauth2_provider_redirect_uris'
@@ -75,7 +102,7 @@ class Oauth2Code(Base):
     __tablename__ = 'oauth2_provider_codes'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, nullable=False)
-    authcode = Column(String(64), unique=True, nullable=False)
+    authorization_code = Column(String(64), unique=True, nullable=False)
     expires_in = Column(Integer, nullable=False, default=10*60)
 
     revoked = Column(Boolean, default=False)
@@ -90,7 +117,7 @@ class Oauth2Code(Base):
         self.client = client
         self.user_id = user_id
 
-        self.authcode = gen_token(self.client)
+        self.authorization_code = gen_token(self.client)
 
     def revoke(self):
         self.revoked = True

@@ -25,12 +25,11 @@ from pyramid.httpexceptions import (
     HTTPUnauthorized,
 )
 
-from .models import Oauth2Token
-from .models import DBSession as db
 from pyramid_oauth2_provider.errors import (
     InvalidToken,
     InvalidRequest,
 )
+from pyramid_oauth2_provider.interfaces.model import IOAuth2Model
 from pyramid_oauth2_provider.util import get_client_credentials
 
 
@@ -64,12 +63,14 @@ class OauthAuthenticationPolicy(CallbackAuthenticationPolicy):
         if token_type != 'bearer':
             return None
 
-        auth_token = db.query(Oauth2Token).filter_by(access_token=token).first()
+        model_if = request.registry.queryUtility(IOAuth2Model)()
+        auth_token = model_if.lookup_token_access_by_token_id(token)
+
         # Bad input, return 400 Invalid Request
         if not auth_token:
             raise HTTPBadRequest(InvalidRequest())
         # Expired or revoked token, return 401 invalid token
-        if auth_token.isRevoked():
+        if auth_token.is_revoked():
             raise HTTPUnauthorized(InvalidToken())
 
         return auth_token

@@ -20,16 +20,18 @@ from pyramid.paster import (
     setup_logging,
     )
 
-from ..models import (
+from pyramid_oauth2_provider_sqlalchemy.models import (
     DBSession,
     Base,
     )
+
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
     print('usage: %s <config_uri>\n'
           '(example: "%s development.ini")' % (cmd, cmd)) 
     sys.exit(1)
+
 
 def main(argv=sys.argv):
     if len(argv) != 2:

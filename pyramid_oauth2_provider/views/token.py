@@ -15,9 +15,6 @@ import logging
 from pyramid.view import view_config
 from pyramid.security import NO_PERMISSION_REQUIRED
 
-from pyramid_oauth2_provider.models import DBSession as db
-from pyramid_oauth2_provider.models import Oauth2Token
-from pyramid_oauth2_provider.models import Oauth2Client
 from pyramid_oauth2_provider.errors import (
     InvalidToken,
     InvalidClient,
@@ -26,6 +23,7 @@ from pyramid_oauth2_provider.errors import (
 )
 from pyramid_oauth2_provider.util import get_client_credentials
 from pyramid_oauth2_provider.interfaces.authentication import IAuthCheck
+from pyramid_oauth2_provider.interfaces.model import IOAuth2Model
 from pyramid_oauth2_provider.jsonerrors import (
     HTTPBadRequest,
     HTTPUnauthorized,
@@ -95,8 +93,7 @@ def oauth2_token(request):
     # Make sure this is a POST.
     if request.method != 'POST':
         log.info('rejected request due to invalid method: %s' % request.method)
-        return HTTPMethodNotAllowed(
-            'This endpoint only supports the POST method.')
+        return HTTPMethodNotAllowed('This endpoint only supports the POST method.')
 
     get_client_credentials(request)
 
@@ -108,8 +105,8 @@ def oauth2_token(request):
         log.info('did not receive client credentials')
         return HTTPUnauthorized('Invalid client credentials')
 
-    client = db.query(Oauth2Client).filter_by(
-        client_id=request.client_id).first()
+    model_if = request.registry.queryUtility(IOAuth2Model)()
+    client = model_if.lookup_client_by_client_id(request.client_id)
 
     # Again, the authorization policy should catch this, but check again.
     if not client or client.client_secret != request.client_secret:
@@ -121,9 +118,11 @@ def oauth2_token(request):
     # submission.
     grant_type = request.POST.get('grant_type')
     if grant_type == 'password':
-        resp = handle_password(request, client)
+        resp = handle_password(request, client, model_if)
+
     elif grant_type == 'refresh_token':
-        resp = handle_refresh_token(request, client)
+        resp = handle_refresh_token(request, client, model_if)
+
     else:
         log.info('invalid grant type: %s' % grant_type)
         return HTTPBadRequest(UnsupportedGrantType(
@@ -134,7 +133,15 @@ def oauth2_token(request):
     return resp
 
 
-def handle_password(request, client):
+def handle_password(request, client, model_if):
+    """
+
+    :param pyramid.request.Request request: Incoming Web Request
+    :param pyramid_oauth2_provider.interfaces.model.OAuth2Client client: OAuth2 Client Interface
+    :param pyramid_oauth2_provider.interfaces.model.OAuth2Model model_if: Data Model Interface
+
+    :return:
+    """
     if 'username' not in request.POST or 'password' not in request.POST:
         log.info('missing username or password')
         return HTTPBadRequest(InvalidRequest(
@@ -148,13 +155,19 @@ def handle_password(request, client):
         log.info('could not validate user credentials')
         return HTTPUnauthorized(InvalidClient(error_description='Username and password are invalid.'))
 
-    auth_token = Oauth2Token(client, user_id)
-    db.add(auth_token)
-    db.flush()
+    auth_token = model_if.create_token_access(client, user_id)
     return auth_token.asJSON(token_type='bearer')
 
 
-def handle_refresh_token(request, client):
+def handle_refresh_token(request, client, model_if):
+    """
+
+    :param pyramid.request.Request request: Incoming Web Request
+    :param pyramid_oauth2_provider.interfaces.model.OAuth2Client client: OAuth2 Client Interface
+    :param pyramid_oauth2_provider.interfaces.model.OAuth2Model model_if: Data Model Interface
+
+    :return:
+    """
     if 'refresh_token' not in request.POST:
         log.info('refresh_token field missing')
         return HTTPBadRequest(InvalidRequest(error_description='refresh_token field required'))
@@ -163,8 +176,7 @@ def handle_refresh_token(request, client):
         log.info('user_id field missing')
         return HTTPBadRequest(InvalidRequest(error_description='user_id field required'))
 
-    auth_token = db.query(Oauth2Token).filter_by(
-        refresh_token=request.POST.get('refresh_token')).first()
+    auth_token = model_if.lookup_token_refresh_by_token_id(request.POST.get('refresh_token'))
 
     if not auth_token:
         log.info('invalid refresh_token')
@@ -179,7 +191,5 @@ def handle_refresh_token(request, client):
         return HTTPBadRequest(InvalidClient(
             error_description='The given user_id does not match the given refresh_token.'))
 
-    new_token = auth_token.refresh()
-    db.add(new_token)
-    db.flush()
+    new_token = model_if.refresh_token_access(auth_token)
     return new_token.asJSON(token_type='bearer')

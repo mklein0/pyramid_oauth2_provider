@@ -27,9 +27,8 @@ class IAuthCheck(Interface):
         usually a relational database. Return the users user_id if credentials
         are valid, otherwise False or None.
 
-        :param username:
-        :param password:
+        :param str username: username for user
+        :param str password: Password for user
 
         :return: Returns the user's user_id if credentials are valid, otherwise False or None
-        :rtype: str | None
         """

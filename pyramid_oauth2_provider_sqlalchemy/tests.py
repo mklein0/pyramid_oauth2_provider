@@ -23,16 +23,22 @@ from zope.interface import implementer
 from pyramid import testing
 from pyramid.response import Response
 
-from . import jsonerrors
-from .views import oauth2_token
-from .views import oauth2_authorize
-from .models import DBSession
-from .models import Oauth2Token
-from .models import Oauth2Client
-from .models import Oauth2Code
-from .models import Oauth2RedirectUri
-from .models import initialize_sql
-from .interfaces import IAuthCheck
+from pyramid_oauth2_provider import jsonerrors
+from pyramid_oauth2_provider.views.token import oauth2_token
+from pyramid_oauth2_provider.views.authorize import oauth2_authorize
+from pyramid_oauth2_provider.interfaces.authentication import IAuthCheck
+from pyramid_oauth2_provider.interfaces.model import IOAuth2Model
+
+from pyramid_oauth2_provider_sqlalchemy.models import (
+    DBSession,
+    Oauth2Token,
+    Oauth2Client,
+    Oauth2Code,
+    Oauth2RedirectUri,
+    initialize_sql,
+)
+from pyramid_oauth2_provider_sqlalchemy.implementation import OAuth2ModelInterface
+
 
 _auth_value = None
 @implementer(IAuthCheck)
@@ -47,6 +53,7 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.config = testing.setUp()
         self.config.registry.registerUtility(AuthCheck, IAuthCheck)
+        self.config.registry.registerUtility(OAuth2ModelInterface, IOAuth2Model)
 
         engine = create_engine('sqlite://')
         initialize_sql(engine, self.config)
@@ -152,7 +159,7 @@ class TestAuthorizeEndpoint(TestCase):
         self.failUnless('code' in params)
 
         dbauthcodes = DBSession.query(Oauth2Code).filter_by(
-            authcode=params.get('code')).all()
+            authorization_code=params.get('code')).all()
 
         self.failUnless(len(dbauthcodes) == 1)
 

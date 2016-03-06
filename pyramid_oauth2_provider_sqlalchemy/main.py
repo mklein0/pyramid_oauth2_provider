@@ -9,21 +9,26 @@
 # without any warrenty; without even the implied warranty of merchantability
 # or fitness for a particular purpose. See the MIT License for full details.
 #
+
+from sqlalchemy import engine_from_config
+
 from pyramid.config import Configurator
 from pyramid.exceptions import ConfigurationError
 from pyramid.interfaces import IAuthenticationPolicy
 
+from pyramid_oauth2_provider_sqlalchemy.models import initialize_sql
 from pyramid_oauth2_provider.interfaces.authentication import IAuthCheck
-from pyramid_oauth2_provider.interfaces.model import IOAuth2Model
 from pyramid_oauth2_provider.authentication import OauthAuthenticationPolicy
+
+# imported to make the test runnner happy
+from pyramid_oauth2_provider import tests
 
 
 def includeme(config):
-    """
-
-    :param pyramid.config.Configurator config: Pyramid WSGI Config Object
-    """
     settings = config.registry.settings
+    engine = engine_from_config(settings, 'sqlalchemy.')
+
+    initialize_sql(engine, settings)
 
     if not config.registry.queryUtility(IAuthenticationPolicy):
         config.set_authentication_policy(OauthAuthenticationPolicy())
@@ -37,17 +42,6 @@ def includeme(config):
 
     policy = config.maybe_dotted(auth_check)
     config.registry.registerUtility(policy, IAuthCheck)
-
-    model_if = settings.get('oauth2_provider.model_interface')
-    if not model_if:
-        raise ConfigurationError(
-            'You must provide an implementation of the model interface that is included with '
-            'pyramid_oauth2_provider for accessing the OAuth2 datastore'
-        )
-
-    inf = config.maybe_dotted(model_if)
-    config.registry.registerUtility(inf, IOAuth2Model)
-    inf().configure_app(config)
 
     config.add_route('oauth2_provider.authorize', '/oauth2/authorize')
     config.add_route('oauth2_provider.token', '/oauth2/token')

@@ -26,12 +26,9 @@ from urlparse import (
 )
 from urllib import urlencode
 
-from pyramid_oauth2_provider.models import DBSession as db
-from pyramid_oauth2_provider.models import Oauth2Code
-from pyramid_oauth2_provider.models import Oauth2RedirectUri
-from pyramid_oauth2_provider.models import Oauth2Client
 from pyramid_oauth2_provider.errors import InvalidRequest
 from pyramid_oauth2_provider.jsonerrors import HTTPBadRequest
+from pyramid_oauth2_provider.interfaces.model import IOAuth2Model
 from pyramid_oauth2_provider.views.util import require_https
 
 
@@ -76,8 +73,8 @@ def oauth2_authorize(request):
     """
     request.client_id = request.params.get('client_id')
 
-    client = db.query(Oauth2Client).filter_by(
-        client_id=request.client_id).first()
+    model_if = request.registry.queryUtility(IOAuth2Model)()
+    client = model_if.lookup_client_by_client_id(request.client_id)
 
     if not client:
         log.info('received invalid client credentials')
@@ -85,13 +82,7 @@ def oauth2_authorize(request):
             error_description='Invalid client credentials'))
 
     redirect_uri = request.params.get('redirect_uri')
-    redirection_uri = None
-    if len(client.redirect_uris) == 1 and (
-            not redirect_uri or redirect_uri == client.redirect_uris[0]):
-        redirection_uri = client.redirect_uris[0]
-    elif len(client.redirect_uris) > 0:
-        redirection_uri = db.query(Oauth2RedirectUri)\
-            .filter_by(client_id=client.id, uri=redirect_uri).first()
+    redirection_uri = client.lookup_redirect_uri(redirect_uri)
 
     if redirection_uri is None:
         return HTTPBadRequest(InvalidRequest(
@@ -100,25 +91,33 @@ def oauth2_authorize(request):
     response_type = request.params.get('response_type')
     state = request.params.get('state')
     if 'code' == response_type:
-        resp = handle_authcode(request, client, redirection_uri, state)
+        resp = handle_authcode(request, client, redirection_uri, model_if, state)
     elif 'token' == response_type:
-        resp = handle_implicit(request, client, redirection_uri, state)
+        resp = handle_implicit(request, client, redirection_uri, model_if, state)
     else:
         log.info('received invalid response_type %s')
         resp = HTTPBadRequest(InvalidRequest(error_description='Oauth2 unknown response_type not supported'))
     return resp
 
 
-def handle_authcode(request, client, redirection_uri, state=None):
-    parts = urlparse(redirection_uri.uri)
+def handle_authcode(request, client, redirection_uri, model_if, state=None):
+    """
+
+    :param pyramid.request.Request request:
+    :param pyramid_oauth2_provider.interfaces.model.OAuth2Client client: OAuth2 Client Interface
+    :param str redirection_uri: Redirection URI
+    :param pyramid_oauth2_provider.interfaces.model.OAuth2Model model_if: Data Model Interface
+    :param str state: Optional state to return to client on redirect
+
+    :return:
+    """
+    parts = urlparse(redirection_uri)
     qparams = dict(parse_qsl(parts.query))
 
     user_id = authenticated_userid(request)
-    auth_code = Oauth2Code(client, user_id)
-    db.add(auth_code)
-    db.flush()
+    auth_code = model_if.create_authorization_code(client, user_id)
 
-    qparams['code'] = auth_code.authcode
+    qparams['code'] = auth_code.authorization_code
     if state:
         qparams['state'] = state
     parts = ParseResult(
@@ -127,6 +126,15 @@ def handle_authcode(request, client, redirection_uri, state=None):
     return HTTPFound(location=parts.geturl())
 
 
-def handle_implicit(request, client, redirection_uri, state=None):
+def handle_implicit(request, client, redirection_uri, model_if, state=None):
+    """
+    :param pyramid.request.Request request:
+    :param pyramid_oauth2_provider.interfaces.model.OAuth2Client client: OAuth2 Client Interface
+    :param str redirection_uri: Redirection URI
+    :param pyramid_oauth2_provider.interfaces.model.OAuth2Model model_if: Data Model Interface
+    :param str state: Optional state to return to client on redirect
+
+    :return:
+    """
     return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
         'response_type "implicit" not supported'))
