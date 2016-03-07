@@ -19,34 +19,49 @@ from pyramid.threadlocal import get_current_registry
 log = logging.getLogger('pyramid_oauth2_provider.util')
 
 
-def oauth2_settings(key=None, default=None, settings=None):
-    """
-    This function returns a single key/value within the current pyramid registries settings. Otherwise
-    returns a dict of only oauth2_provider key/values.
+SETTING_PREFIX = 'oauth2_provider.'
+SETTING_FORMAT = SETTING_PREFIX + '{0}'
 
-    :param str | None key: key name
-    :param Any default: default value to return
+
+def oauth2_setting(key, default=None, settings=None):
+    """
+    This function returns a single key/value within the current pyramid registries settings.
+
+    :param str key: key name
+    :param default: default value to return
     :param pyramid.config.settings.Settings settings: Pyramid Application Settings
 
-    :return:
+    :return: Value of key found, or default value given.
     """
     if settings is None:
         settings = get_current_registry().settings
 
-    if key:
-        value = settings.get('oauth2_provider.{0}'.format(key), default)
-        if value == 'true':
-            return True
-        elif value == 'false':
-            return False
-        else:
-            return value
+    value = settings.get(SETTING_FORMAT.format(key), default)
+    if value == 'true':
+        return True
+    elif value == 'false':
+        return False
     else:
-        return dict(
-            (x.split('.', 1)[1], y)
-            for x, y in settings.iteritems()
-            if x.startswith('oauth2_provider.')
-        )
+        return value
+
+
+def oauth2_settings(settings=None):
+    """
+    This function returns a dict of only oauth2_provider key/values.
+
+    :param pyramid.config.settings.Settings settings: Pyramid Application Settings
+
+    :return: dict of oauth2_provider key/values
+    :rtype: dict
+    """
+    if settings is None:
+        settings = get_current_registry().settings
+
+    return dict(
+        (x.split('.', 1)[1], y)
+        for x, y in settings.iteritems()
+        if x.startswith(SETTING_PREFIX)
+    )
 
 
 def get_client_credentials(request):
