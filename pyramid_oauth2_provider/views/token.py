@@ -15,11 +15,11 @@ import logging
 from pyramid.view import view_config
 from pyramid.security import NO_PERMISSION_REQUIRED
 
-from pyramid_oauth2_provider.errors import (
-    InvalidToken,
+from pyramid_oauth2_provider.errors.token import (
     InvalidClient,
     InvalidRequest,
     UnsupportedGrantType,
+    InvalidGrant,
 )
 from pyramid_oauth2_provider.util import get_client_credentials
 from pyramid_oauth2_provider.interfaces.authentication import IAuthCheck
@@ -180,11 +180,11 @@ def handle_refresh_token(request, client, model_if):
 
     if not auth_token:
         log.info('invalid refresh_token')
-        return HTTPUnauthorized(InvalidToken(error_description='Provided refresh_token is not valid.'))
+        return HTTPUnauthorized(InvalidGrant(error_description='Provided refresh_token is not valid.'))
 
     if auth_token.client.client_id != client.client_id:
         log.info('invalid client_id')
-        return HTTPBadRequest(InvalidClient(error_description='Client does not own this refresh_token.'))
+        return HTTPBadRequest(InvalidGrant(error_description='Client does not own this refresh_token.'))
 
     if str(auth_token.user_id) != request.POST.get('user_id'):
         log.info('invalid user_id')

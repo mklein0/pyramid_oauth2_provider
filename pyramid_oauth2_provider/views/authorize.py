@@ -26,7 +26,7 @@ from urlparse import (
 )
 from urllib import urlencode
 
-from pyramid_oauth2_provider.errors import InvalidRequest
+from pyramid_oauth2_provider.errors.authorize import InvalidRequest
 from pyramid_oauth2_provider.jsonerrors import HTTPBadRequest
 from pyramid_oauth2_provider.interfaces.model import IOAuth2Model
 from pyramid_oauth2_provider.views.util import require_https
@@ -136,5 +136,4 @@ def handle_implicit(request, client, redirection_uri, model_if, state=None):
 
     :return:
     """
-    return HTTPBadRequest(InvalidRequest(error_description='Oauth2 '
-        'response_type "implicit" not supported'))
+    return HTTPBadRequest(InvalidRequest(error_description='Oauth2 response_type "implicit" not supported'))

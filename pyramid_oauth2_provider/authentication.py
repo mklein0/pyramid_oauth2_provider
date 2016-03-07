@@ -25,9 +25,9 @@ from pyramid.httpexceptions import (
     HTTPUnauthorized,
 )
 
-from pyramid_oauth2_provider.errors import (
-    InvalidToken,
+from pyramid_oauth2_provider.errors.token import (
     InvalidRequest,
+    InvalidGrant,
 )
 from pyramid_oauth2_provider.interfaces.model import IOAuth2Model
 from pyramid_oauth2_provider.util import get_client_credentials
@@ -71,7 +71,7 @@ class OauthAuthenticationPolicy(CallbackAuthenticationPolicy):
             raise HTTPBadRequest(InvalidRequest())
         # Expired or revoked token, return 401 invalid token
         if auth_token.is_revoked():
-            raise HTTPUnauthorized(InvalidToken())
+            raise HTTPUnauthorized(InvalidGrant())
 
         return auth_token
 

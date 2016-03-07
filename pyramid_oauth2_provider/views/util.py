@@ -12,7 +12,7 @@
 import logging
 
 from pyramid_oauth2_provider.jsonerrors import HTTPBadRequest
-from pyramid_oauth2_provider.errors import InvalidRequest
+from pyramid_oauth2_provider.errors.token import InvalidRequest
 from pyramid_oauth2_provider.util import oauth2_setting
 
 
@@ -38,8 +38,7 @@ def require_https(handler):
                 oauth2_setting('require_ssl', default=True, settings=request.registry.settings)):
             log.info('rejected request due to unsupported scheme: {0}'.format(request.scheme))
             return HTTPBadRequest(InvalidRequest(
-                error_description='Oauth2 requires all requests'
-                                  ' to be made via HTTPS.'))
+                error_description='Oauth2 requires all requests to be made via HTTPS.'))
         return handler(request)
     return wrapped
 
