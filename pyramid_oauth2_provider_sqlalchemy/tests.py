@@ -25,7 +25,7 @@ from pyramid.response import Response
 
 from pyramid_oauth2_provider import jsonerrors
 from pyramid_oauth2_provider.views.token import oauth2_token
-from pyramid_oauth2_provider.views.authorize import oauth2_authorize
+from pyramid_oauth2_provider.views.authorize import oauth2_authorize_complete
 from pyramid_oauth2_provider.interfaces.authentication import IAuthCheck
 from pyramid_oauth2_provider.interfaces.model import IOAuth2Model
 
@@ -41,12 +41,13 @@ from pyramid_oauth2_provider_sqlalchemy.implementation import OAuth2ModelInterfa
 
 
 _auth_value = None
+_redirect_uri = None
+
+
 @implementer(IAuthCheck)
 class AuthCheck(object):
     def checkauth(self, username, password):
         return _auth_value
-
-_redirect_uri = None
 
 
 class TestCase(unittest.TestCase):
@@ -92,7 +93,7 @@ class TestCase(unittest.TestCase):
         )
 
 
-class TestAuthorizeEndpoint(TestCase):
+class TestAuthorizeCompleteEndpoint(TestCase):
     def setUp(self):
         TestCase.setUp(self)
         self.client = self._create_client()
@@ -140,7 +141,7 @@ class TestAuthorizeEndpoint(TestCase):
 
     def _process_view(self):
         with transaction.manager:
-            token = oauth2_authorize(self.request)
+            token = oauth2_authorize_complete(self.request)
         return token
 
     def _validate_authcode_response(self, response):
@@ -235,6 +236,7 @@ class TestAuthorizeEndpoint(TestCase):
         params = dict(parse_qsl(parts.query))
         self.failUnless('state' in params)
         self.failUnlessEqual(state_value, params['state'])
+
 
 class TestTokenEndpoint(TestCase):
     def setUp(self):

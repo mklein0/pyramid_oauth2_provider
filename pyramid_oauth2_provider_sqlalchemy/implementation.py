@@ -83,16 +83,17 @@ class OAuth2ModelInterface(object):
 
         return new_token
 
-    def create_authorization_code(self, client, user_id):
+    def create_authorization_code(self, client, user_id, redirection_uri, scope, state):
         """
 
         :param IOAuth2ModelClient client:
         :param user_id:
+        :param redirection_uri:
+        :param scope:
+        :param state:
 
         :rtype: IOAuth2ModelCodeAuthorization
         """
-        if isinstance(client, IOAuth2ModelClient):
-            client = client._client
         auth_code = Oauth2Code(client, user_id)
         db.add(auth_code)
         db.flush()

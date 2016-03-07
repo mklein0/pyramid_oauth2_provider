@@ -16,6 +16,7 @@ from pyramid.interfaces import IAuthenticationPolicy
 from pyramid_oauth2_provider.interfaces.authentication import IAuthCheck
 from pyramid_oauth2_provider.interfaces.model import IOAuth2Model
 from pyramid_oauth2_provider.authentication import OauthAuthenticationPolicy
+from pyramid_oauth2_provider.util import oauth2_setting
 
 
 def includeme(config):
@@ -49,7 +50,14 @@ def includeme(config):
     config.registry.registerUtility(inf, IOAuth2Model)
     inf().configure_app(config)
 
+    login_uri = oauth2_setting('login_uri', default='', settings=settings).strip()
+    if not login_uri:
+        raise ConfigurationError(
+            'You must provide a login URI to which is wrapped by the authorize call.'
+        )
+
     config.add_route('oauth2_provider.authorize', '/oauth2/authorize')
+    config.add_route('oauth2_provider.authorize.complete', '/oauth2/authorize/complete')
     config.add_route('oauth2_provider.token', '/oauth2/token')
     config.scan()
 
