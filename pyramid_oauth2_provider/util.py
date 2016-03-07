@@ -26,7 +26,7 @@ def oauth2_settings(key=None, default=None, settings=None):
 
     :param str | None key: key name
     :param Any default: default value to return
-    :param dict settings: Pyramid Application Settings
+    :param pyramid.config.settings.Settings settings: Pyramid Application Settings
 
     :return:
     """
